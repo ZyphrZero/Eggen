@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dev-proxy.config.json
+.wrangler/
+.vercel/
+.env
+.env.local
+.env.*.local
+.dev.vars
+.codegraph/
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

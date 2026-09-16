@@ -1,0 +1,68 @@
+{
+  "customProviders": [
+    {
+      "id": "custom-doubao-ark",
+      "name": "豆包",
+      "submit": {
+        "path": "images/generations",
+        "method": "POST",
+        "contentType": "json",
+        "body": {
+          "model": "$profile.model",
+          "prompt": "$prompt",
+          "image": "$inputImages.dataUrls",
+          "size": "$params.size",
+          "watermark": true,
+          "stream": false
+        },
+        "result": {
+          "imageUrlPaths": [
+            "data.*.url"
+          ],
+          "b64JsonPaths": [
+            "data.*.b64_json"
+          ]
+        }
+      },
+      "balance": {
+        "template": "volcengine-billing",
+        "params": {
+          "region": "cn-shanghai",
+          "service": "billing",
+          "action": "QueryBalanceAcct",
+          "version": "2022-01-01"
+        }
+      },
+      "models": [
+        {
+          "id": "doubao-seedream-5-0-pro-260628",
+          "name": "豆包 Seedream 5.0 Pro",
+          "description": "火山方舟 `doubao-seedream-5-0-pro-260628`。\n\n**尺寸**：面积须在 921600 ~ 4624220 像素之间。\n- 2K 档全部可用\n- 1K 档仅 1024x1024 / 1536x1024 / 1024x1536 / 1280x720 / 720x1280\n- 4K 档全部超限\n- 不可选「自动」，豆包不支持 `size: auto`\n\n该模型当前受账号「安全体验模式」额度限制，需在方舟控制台关闭后方可使用。"
+        },
+        {
+          "id": "doubao-seedream-5-0-260128",
+          "name": "豆包 Seedream 5.0 Lite",
+          "description": "火山方舟 `doubao-seedream-5-0-260128`。\n\n**尺寸**：面积须在 3686400 ~ 16777216 像素之间，下限约为 Pro 的 4 倍。\n- 4K 档全部可用\n- 2K 档仅 2048x2048 / 2560x1440 / 1440x2560\n- 1K 档全部低于下限\n- 不可选「自动」\n\n通用说明：接口不接受 `n`，每次请求只出 1 张图。`watermark` 固定为 `true`，需要关闭水印请在服务商 Manifest 的 body 中改为 `false`。请求走 `response_format: b64_json`，因为豆包返回的图片链接不带 CORS 头，浏览器无法直接读取。"
+        },
+        {
+          "id": "doubao-seedream-4-5-251128",
+          "name": "豆包 Seedream 4.5",
+          "description": "火山方舟 `doubao-seedream-4-5-251128`。\n\n**尺寸**：约束与 Seedream 5.0 相同（面积 3686400 ~ 16777216），建议直接用 4K 档。尺寸关键字接受 `1k` / `2k` / `4k`。\n\n该模型在你账号上已开通（原先未开通，现已可用）。"
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "custom-doubao-ark-seedream5",
+      "name": "豆包",
+      "provider": "custom-doubao-ark",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/",
+      "model": "doubao-seedream-5-0-260128",
+      "apiMode": "images",
+      "responseFormatB64Json": true,
+      "transparentBackgroundMethod": "local",
+      "isDefault": true
+    }
+  ]
+}
