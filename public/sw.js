@@ -1,5 +1,6 @@
-const CACHE_NAME = 'gpt-image-playground-v0.7.12'
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './pwa-icon.svg']
+// 缓存名跟随品牌，激活时会清掉旧品牌遗留的缓存
+const CACHE_NAME = 'eggen-v0.1.0'
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './eggen-icon.svg', './eggen-icon.png']
 const APP_SHELL_URLS = new Set(APP_SHELL.map((path) => new URL(path, self.registration.scope).href))
 const ASSETS_PATH = new URL('./assets/', self.registration.scope).pathname
 

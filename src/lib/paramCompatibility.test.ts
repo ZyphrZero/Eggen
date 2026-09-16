@@ -2,8 +2,26 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_PARAMS } from '../types'
 import { createDefaultFalProfile, createDefaultOpenAIProfile, DEFAULT_SETTINGS, normalizeSettings } from './apiProfiles'
 import { getOutputImageLimitForSettings, normalizeParamsForSettings } from './paramCompatibility'
+import config from '../../doubao-ark-config.json'
 
 describe('parameter compatibility', () => {
+  it.each(config.customProviders[0].models)('uses intelligent 2K size for $name, including image edits', ({ id }) => {
+    const settings = normalizeSettings({ ...config, profiles: [{ ...config.profiles[0], model: id }] })
+    for (const hasInputImages of [false, true]) {
+      expect(normalizeParamsForSettings({ ...DEFAULT_PARAMS, size: 'auto' }, settings, { hasInputImages }).size).toBe('2K')
+    }
+  })
+
+  it('preserves valid Seedream 4K dimensions instead of applying GPT Image limits', () => {
+    const settings = normalizeSettings(config)
+    expect(normalizeParamsForSettings({ ...DEFAULT_PARAMS, size: '5504x3040' }, settings).size).toBe('5504x3040')
+    expect(normalizeParamsForSettings({ ...DEFAULT_PARAMS, size: '3750x1250' }, settings).size).toBe('3750x1250')
+  })
+
+  it('returns to automatic size when switching a Seedream resolution tier to GPT Image', () => {
+    expect(normalizeParamsForSettings({ ...DEFAULT_PARAMS, size: '3K' }, DEFAULT_SETTINGS).size).toBe('auto')
+  })
+
   it('limits OpenAI output count to 10', () => {
     const openAIProfile = createDefaultOpenAIProfile({ apiKey: 'test-key', streamImages: false })
     const settings = normalizeSettings({

@@ -80,12 +80,12 @@ export async function migrateStoredApiAccounts(
   tasks: TaskRecord[],
   saveState: (patch: Partial<typeof state>) => void,
 ) {
-  if (localStorage.getItem('gpt-image-playground.api-accounts-v1-migrated') === 'done') return tasks
+  if (localStorage.getItem('eggen.api-accounts-v1-migrated') === 'done') return tasks
   const migrated = migrateApiAccounts(state.settings, tasks)
   const previous = state.previousPresetConfig
     ? migrateApiAccounts(normalizeSettings(state.previousPresetConfig), []).settings
     : null
-  const rawBalance = localStorage.getItem('gpt-image-playground.balance')
+  const rawBalance = localStorage.getItem('eggen.balance')
   const balance = rawBalance ? JSON.parse(rawBalance) : {}
   const accounts = { ...balance.accounts }
   for (const provider of migrated.settings.customProviders) {
@@ -103,7 +103,7 @@ export async function migrateStoredApiAccounts(
     previousPresetConfig: previous ? { profiles: previous.profiles, customProviders: previous.customProviders } : null,
     dismissedPresetProfileIds: [...new Set(state.dismissedPresetProfileIds.map((id) => migrated.idMap.get(id) ?? id))],
   })
-  if (rawBalance) localStorage.setItem('gpt-image-playground.balance', JSON.stringify({ accounts }))
-  localStorage.setItem('gpt-image-playground.api-accounts-v1-migrated', 'done')
+  if (rawBalance) localStorage.setItem('eggen.balance', JSON.stringify({ accounts }))
+  localStorage.setItem('eggen.api-accounts-v1-migrated', 'done')
   return migrated.tasks
 }

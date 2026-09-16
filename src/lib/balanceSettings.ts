@@ -2,7 +2,7 @@
  * 余额/用量查询的通用设置存储。
  * 按账号配置 id 分区，凭证不会随应用配置导出。
  */
-const SETTINGS_STORAGE_KEY = 'gpt-image-playground.balance'
+const SETTINGS_STORAGE_KEY = 'eggen.balance'
 
 export const DEFAULT_BALANCE_TIMEOUT_SECONDS = 30
 export const MAX_BALANCE_TIMEOUT_SECONDS = 600

@@ -77,7 +77,7 @@ export default function SupportPromptModal() {
             赞助作者
           </a>
           <a
-            href="https://github.com/CookSleep/gpt_image_playground/issues"
+            href="https://github.com/ZyphrZero/Eggen/issues"
             target="_blank"
             rel="noopener noreferrer"
             onClick={dismissSupportPrompt}

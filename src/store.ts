@@ -69,6 +69,7 @@ import { createPersistedState, mergePersistedAgentConversations, migratePersiste
 import { addImageSizeParam, createTaskDonePatch, createTaskErrorPatch, deriveAgentImageActualParams, deriveGalleryActualParams, firstActualParams, hasActualParams, hasActualSizeParam, mapActualParamsByImage, mapRevisedPromptsByImage, markInterruptedOpenAIRunningTasks } from './lib/taskState'
 import { stripInjectedCodexCliSizePrompt } from './lib/size'
 import { migrateStoredApiAccounts } from './lib/migrateApiAccounts'
+import { ArkTaskQueryError, isArkBackgroundTask, isArkImageProfile } from './lib/arkBackground'
 
 const FAL_RECOVERY_POLL_MS = 10_000
 const CUSTOM_RECOVERY_POLL_MS = 10_000
@@ -1016,7 +1017,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'gpt-image-playground',
+      name: 'eggen',
       version: 2,
       migrate: migratePersistedState,
       partialize: getPersistedState,
@@ -1084,6 +1085,7 @@ function isRunningOpenAITask(task: TaskRecord) {
 
 function isAsyncCustomProviderTask(settings: AppSettings, provider: string, hasInputImages: boolean) {
   const customProvider = getCustomProviderDefinition(settings, provider)
+  if (customProvider && isArkImageProfile(getActiveApiProfile(settings))) return true
   if (!customProvider?.poll) return false
   const submitMapping = hasInputImages && customProvider.editSubmit ? customProvider.editSubmit : customProvider.submit
   return Boolean(submitMapping.taskIdPath)
@@ -1236,6 +1238,7 @@ function getTaskApiProfileName(task: TaskRecord) {
 }
 
 function isNetworkRecoverableError(err: unknown) {
+  if (err instanceof ArkTaskQueryError) return true
   if (typeof DOMException !== 'undefined' && err instanceof DOMException && err.name === 'AbortError') return true
   const message = err instanceof Error ? err.message : String(err)
   return /abort|network|failed to fetch|fetch failed|load failed|timeout|连接|断开|中断/i.test(message)
@@ -2871,8 +2874,8 @@ async function executeAgentRound(
             falRecoverable: false,
           })
         },
-        onCustomTaskEnqueued: (request) => {
-          updateTaskInStore(opts.taskId, {
+        onCustomTaskEnqueued: async (request) => {
+          await updateTaskInStore(opts.taskId, {
             customTaskId: request.taskId,
             customRecoverable: false,
           })
@@ -3579,9 +3582,10 @@ async function executeTask(taskId: string) {
           falRecoverable: false,
         })
       },
-      onCustomTaskEnqueued: (request) => {
+      onCustomTaskEnqueued: async (request) => {
         customTaskInfo = request
-        updateTaskInStore(taskId, {
+        clearOpenAIWatchdogTimer(taskId)
+        await updateTaskInStore(taskId, {
           customTaskId: request.taskId,
           customRecoverable: false,
         })
@@ -3729,7 +3733,7 @@ export function updateTaskInStore(taskId: string, patch: Partial<TaskRecord>) {
   const task = updated.find((t) => t.id === taskId)
   setTasks(updated)
   maybeOpenSupportPrompt(tasks, updated, taskId)
-  if (task) putTask(task)
+  if (task) return putTask(task)
 }
 
 export function createFavoriteCollection(name: string) {
@@ -4276,7 +4280,7 @@ async function recoverCustomTask(taskId: string) {
 
   const profile = getCustomRecoveryProfile(settings, task)
   const customProvider = profile ? getCustomProviderDefinition(settings, profile.provider) : null
-  if (!profile || !customProvider?.poll) {
+  if (!profile || !customProvider || (!customProvider.poll && !isArkBackgroundTask(task.customTaskId))) {
     scheduleCustomRecovery(taskId)
     return
   }
@@ -4288,6 +4292,10 @@ async function recoverCustomTask(taskId: string) {
   } catch (err) {
     clearCustomRecoveryTimer(taskId)
     if (!useStore.getState().tasks.some((item) => item.id === taskId)) return
+    if (err instanceof ArkTaskQueryError) {
+      scheduleCustomRecovery(taskId)
+      return
+    }
     updateTaskInStore(taskId, {
       ...createTaskErrorPatch(task, err instanceof Error ? err.message : String(err), Date.now()),
       ...getRawErrorPayload(err),
@@ -4365,7 +4373,7 @@ export async function exportData(options: ExportOptions = { exportConfig: true, 
       const a = document.createElement('a')
       const suffix = plan.length > 1 ? `_${String(plan.length).padStart(2, '0')}parts_part${String(partNumber).padStart(2, '0')}` : ''
       a.href = url
-      a.download = `gpt-image-playground-backup_${formatExportFileTime(new Date(exportedAt))}${suffix}.zip`
+      a.download = `eggen-backup_${formatExportFileTime(new Date(exportedAt))}${suffix}.zip`
       document.body.appendChild(a)
       a.click()
       a.remove()

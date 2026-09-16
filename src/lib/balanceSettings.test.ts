@@ -9,7 +9,7 @@ import {
   saveBalanceSettings,
 } from './balanceSettings'
 
-const STORAGE_KEY = 'gpt-image-playground.balance'
+const STORAGE_KEY = 'eggen.balance'
 
 beforeEach(() => vi.stubGlobal('localStorage', (globalThis as unknown as { jsdom: { window: Window } }).jsdom.window.localStorage))
 afterEach(() => localStorage.clear())

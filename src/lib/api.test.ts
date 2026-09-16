@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PARAMS } from '../types'
-import { createDefaultOpenAIProfile, DEFAULT_IMAGES_MODEL, DEFAULT_SETTINGS } from './apiProfiles'
+import { createDefaultOpenAIProfile, DEFAULT_IMAGES_MODEL, DEFAULT_SETTINGS, normalizeSettings } from './apiProfiles'
 import { normalizePersistedState } from './persistedState'
 import { callImageApi } from './api'
 import { maybeAppendStreamingHint } from './imageApiShared'
+import config from '../../doubao-ark-config.json'
 
 describe('API error hints', () => {
   it.each([false, true])('uses the transparent background hint when streaming is %s', (streamImages) => {
@@ -20,6 +21,46 @@ describe('callImageApi', () => {
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
     vi.useRealTimers()
+  })
+
+  it.each(config.customProviders[0].models)('sends intelligent resolution tiers to $name for generation and editing', async ({ id }) => {
+    const settings = normalizeSettings({ ...config, profiles: [{ ...config.profiles[0], model: id, apiKey: 'test-key', apiProxy: false }] })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('request captured'))
+    for (const inputImageDataUrls of [[], ['data:image/png;base64,aW1hZ2U=']]) {
+      for (const size of ['auto', '2K', '2048x2048']) {
+        const params = { ...DEFAULT_PARAMS, size }
+        await expect(callImageApi({ settings, prompt: '横向风景图', params, inputImageDataUrls })).rejects.toThrow('request captured')
+        const body = JSON.parse(String(fetchMock.mock.lastCall?.[1]?.body))
+        expect(body.model).toBe(id)
+        expect(body.size).toBe(size === 'auto' ? '2K' : size)
+        expect(body.prompt).toBe('横向风景图')
+        expect(body.image).toEqual(inputImageDataUrls.length ? inputImageDataUrls : undefined)
+        expect(params.size).toBe(size)
+      }
+    }
+  })
+
+  it.each([
+    ['doubao-seedream-5-0-pro-260628', '1.5K'],
+    ['doubao-seedream-5-0-260128', '3K'],
+    ['doubao-seedream-5-0-260128', '5504x3040'],
+  ])('preserves supported %s size %s in the request body', async (model, size) => {
+    const settings = normalizeSettings({ ...config, profiles: [{ ...config.profiles[0], model, apiKey: 'test-key', apiProxy: false }] })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('request captured'))
+    await expect(callImageApi({ settings, prompt: 'prompt', params: { ...DEFAULT_PARAMS, size }, inputImageDataUrls: [] })).rejects.toThrow('request captured')
+    expect(JSON.parse(String(fetchMock.mock.lastCall?.[1]?.body)).size).toBe(size)
+  })
+
+  it.each([
+    ['doubao-seedream-5-0-pro-260628', '4K'],
+    ['doubao-seedream-5-0-pro-260628', '4096x4096'],
+    ['doubao-seedream-5-0-260128', '1K'],
+    ['doubao-seedream-5-0-260128', '1024x1024'],
+  ])('rejects unsupported %s size %s before a network request', async (model, size) => {
+    const settings = normalizeSettings({ ...config, profiles: [{ ...config.profiles[0], model }] })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected request'))
+    await expect(callImageApi({ settings, prompt: 'prompt', params: { ...DEFAULT_PARAMS, size }, inputImageDataUrls: [] })).rejects.toThrow('当前')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it.each([false, true])(

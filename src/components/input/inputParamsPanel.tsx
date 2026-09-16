@@ -19,6 +19,7 @@ export default function InputParamsPanel({
   isFalProvider,
   isFalTextToImage,
   displaySize,
+  sizeError,
   qualityOptions,
   selectClass,
   transparentOutputAvailable,
@@ -59,6 +60,7 @@ export default function InputParamsPanel({
   isFalProvider: boolean
   isFalTextToImage: boolean
   displaySize: string
+  sizeError: string | null
   qualityOptions: Array<{ label: string; value: string }>
   selectClass: string
   transparentOutputAvailable: boolean
@@ -111,6 +113,7 @@ export default function InputParamsPanel({
         >
           {displaySize}
         </button>
+        {sizeError && <span role="alert" className="mt-1 text-xs text-red-500">{sizeError}</span>}
         <ButtonTooltip
           visible={(isFalTextToImage || activeProfile.codexCli) && sizeHint.visible}
           text={isFalTextToImage

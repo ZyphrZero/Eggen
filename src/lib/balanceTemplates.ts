@@ -72,23 +72,28 @@ function readField(values: Record<string, string>, key: string) {
 interface VolcengineBillingPayload {
   ResponseMetadata?: { Error?: { Code?: string; Message?: string } }
   Result?: Record<string, unknown>
+  error?: { message?: string }
 }
 
 /** 发起一次请求；网络层失败（含跨域被拦）原样抛出 TypeError 供调用方决定是否退回代理 */
-async function postSignedQuery(url: string, timeout: number): Promise<Record<string, unknown>> {
+async function postSignedQuery(url: string, timeout: number, query?: string): Promise<Record<string, unknown>> {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), timeout * 1000)
 
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: '{}',
+      headers: { 'Content-Type': 'application/json; charset=utf-8', ...(query ? { 'X-Eggen-Timeout': String(timeout) } : {}) },
+      body: query ? JSON.stringify({ query }) : '{}',
       cache: 'no-store',
       signal: controller.signal,
     })
 
+    if (query && !response.headers.get('Content-Type')?.includes('application/json')) {
+      throw new Error('当前部署未提供可用的余额查询代理，请更新 Cloudflare Worker 或检查同源代理配置。')
+    }
     const payload = await response.json().catch(() => null) as VolcengineBillingPayload | null
+    if (query && payload?.error?.message) throw new Error(payload.error.message)
     const error = payload?.ResponseMetadata?.Error
     if (error) throw new Error(`[${error.Code ?? 'Error'}] ${error.Message ?? '请求失败'}`)
     if (!response.ok || !payload?.Result) throw new Error(`查询失败：HTTP ${response.status}`)
@@ -130,6 +135,13 @@ const VOLCENGINE_BILLING_TEMPLATE: BalanceTemplate = {
     const action = mapping.params?.action?.trim() || 'QueryBalanceAcct'
     const version = mapping.params?.version?.trim() || '2022-01-01'
     const endpoint = mapping.params?.endpoint?.trim() || 'https://open.volcengineapi.com/'
+    const proxyPath = mapping.params?.proxyPath?.trim()
+    if (proxyPath) {
+      const url = new URL(proxyPath, window.location.href)
+      if (!proxyPath.startsWith('/') || url.origin !== window.location.origin || url.search || url.hash) {
+        throw new Error('余额查询代理必须使用不带查询参数的同源路径。')
+      }
+    }
     const timeout = normalizeBoundedNumber(timeoutSeconds, DEFAULT_BALANCE_TIMEOUT_SECONDS, 1, MAX_BALANCE_TIMEOUT_SECONDS)
 
     const sessionToken = readField(values, 'sessionToken')
@@ -145,8 +157,14 @@ const VOLCENGINE_BILLING_TEMPLATE: BalanceTemplate = {
 
     let result: Record<string, unknown>
     try {
-      result = await postSignedQuery(`${endpoint}?${query}`, timeout)
+      result = proxyPath
+        ? await postSignedQuery(proxyPath, timeout, query)
+        : await postSignedQuery(`${endpoint}?${query}`, timeout)
     } catch (err) {
+      if (proxyPath) {
+        if (err instanceof TypeError) throw new Error('余额查询代理连接失败，请确认 Cloudflare Worker 或同源代理正常运行。')
+        throw err
+      }
       // 该接口响应不带跨域头，直连必然被拦；此时退回应用代理（开发用 dev-proxy，部署用 VITE_API_PROXY_AVAILABLE）。
       if (!(err instanceof TypeError)) throw err
       if (!isApiProxyAvailable(proxyConfig)) throw new Error(CORS_BLOCKED_MESSAGE)

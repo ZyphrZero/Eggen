@@ -1,9 +1,10 @@
-# Agent Instructions for gpt-image-playground
+# Agent Instructions for eggen（蛋壳）
 
 本文件定义 AI 编码助手在此仓库中应遵循的工作方式。
 
 ## 项目概况
 
+- 项目名为「蛋壳」，英文名 Eggen；仓库由 GPT Image Playground（MIT）改名而来，界面文案统一使用「蛋壳 Eggen」。
 - React 19 + Vite + TypeScript 前端应用，使用 Zustand 状态管理、Tailwind CSS 样式。
 - 源码在 `src/`，构建产物由 Vite 生成，不要手动编辑 `dist/`。
 - 包管理器为 npm（有 `package-lock.json`），不要使用 yarn 或 pnpm。

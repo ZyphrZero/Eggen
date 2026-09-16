@@ -76,6 +76,49 @@ describe('volcengine billing query', () => {
     expect(result.rows.filter((row) => row.primary)).toHaveLength(1)
   })
 
+  it('uses the configured same-origin balance proxy without sending the secret or putting signatures in its URL', async () => {
+    const requests: Array<{ url: string; init: RequestInit }> = []
+    stubFetch((url, init) => {
+      requests.push({ url, init })
+      return Promise.resolve(jsonResponse({ Result: { AvailableBalance: '19.4', Currency: 'CNY' } }))
+    })
+    const result = await template.query({
+      mapping: { ...MAPPING, params: { ...MAPPING.params, proxyPath: '/api/ark/balance' } },
+      values: VALUES,
+      timeoutSeconds: 5,
+    })
+    expect(requests).toHaveLength(1)
+    expect(requests[0].url).toBe('/api/ark/balance')
+    const body = JSON.parse(String(requests[0].init.body))
+    expect(Object.keys(body)).toEqual(['query'])
+    expect(new URLSearchParams(body.query).get('Action')).toBe('QueryBalanceAcct')
+    expect(new URLSearchParams(body.query).has('X-Signature')).toBe(true)
+    expect(JSON.stringify(requests)).not.toContain(VALUES.secretAccessKey)
+    expect(result.rows[0].value).toBe('¥19.40')
+  })
+
+  it('reports an unavailable same-origin backend instead of attempting a direct request', async () => {
+    const fetchMock = vi.fn(async () => new Response('<html>app</html>', { headers: { 'Content-Type': 'text/html' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(template.query({
+      mapping: { ...MAPPING, params: { ...MAPPING.params, proxyPath: '/api/ark/balance' } },
+      values: VALUES,
+      timeoutSeconds: 5,
+    })).rejects.toThrow('余额查询代理')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a proxy path on a different origin before transmitting signed credentials', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(template.query({
+      mapping: { ...MAPPING, params: { ...MAPPING.params, proxyPath: '//other.test/balance' } },
+      values: VALUES,
+      timeoutSeconds: 5,
+    })).rejects.toThrow('同源')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('aborts and reports a timeout', async () => {
     stubFetch((_url, init) => new Promise((_resolve, reject) => {
       init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))

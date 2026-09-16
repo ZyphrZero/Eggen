@@ -1,10 +1,8 @@
 <div align="center">
 
-# 🎨 GPT Image Playground
+# 🥚 蛋壳 Eggen
 
-[![GitHub Repo stars](https://img.shields.io/github/stars/CookSleep/gpt_image_playground?style=flat-square&color=eab308)](https://github.com/CookSleep/gpt_image_playground/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/CookSleep/gpt_image_playground?style=flat-square&color=3b82f6)](https://github.com/CookSleep/gpt_image_playground/network/members)
-[![License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](https://github.com/CookSleep/gpt_image_playground/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-10b981?style=flat-square)](LICENSE)
 [![React](https://img.shields.io/badge/React-19-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
@@ -13,11 +11,15 @@
 提供简洁精美的 Web UI，支持 OpenAI / OpenAI 兼容接口、sub2api（异步）、fal.ai 与可导入的自定义 HTTP 供应商。<br>
 支持文本生图、参考图与遮罩编辑，数据纯本地化存储，带来流畅的历史记录与参数管理体验。
 
+本项目由开源项目 [GPT Image Playground](https://github.com/CookSleep/gpt_image_playground)（MIT）改名而来，感谢原作者 [@CookSleep](https://github.com/CookSleep) 的开源工作。
+
 <br>
 
-[![Vercel 在线体验](https://img.shields.io/badge/Vercel-%E5%9C%A8%E7%BA%BF%E4%BD%93%E9%AA%8C-black?style=for-the-badge&logo=vercel&logoColor=white)](https://gpt-image-playground.cooksleep.dev)
+原项目提供的在线体验（与本项目功能一致，可用于快速上手）：
 &nbsp;&nbsp;&nbsp;
-[![GitHub Pages 在线体验](https://img.shields.io/badge/GitHub%20Pages-%E5%9C%A8%E7%BA%BF%E4%BD%93%E9%AA%8C-222222?style=for-the-badge&logo=github&logoColor=white)](https://cooksleep.github.io/gpt_image_playground)
+[![原项目 Vercel 在线体验](https://img.shields.io/badge/Vercel-%E5%8E%9F%E9%A1%B9%E7%9B%AE%E5%9C%A8%E7%BA%BF%E4%BD%93%E9%AA%8C-black?style=for-the-badge&logo=vercel&logoColor=white)](https://gpt-image-playground.cooksleep.dev)
+&nbsp;&nbsp;&nbsp;
+[![原项目 GitHub Pages 在线体验](https://img.shields.io/badge/GitHub%20Pages-%E5%8E%9F%E9%A1%B9%E7%9B%AE%E5%9C%A8%E7%BA%BF%E4%BD%93%E9%AA%8C-222222?style=for-the-badge&logo=github&logoColor=white)](https://cooksleep.github.io/gpt_image_playground)
 
 </div>
 
@@ -214,7 +216,7 @@ VITE_DEFAULT_API_URL=https://api.openai.com/v1
 
 **初始部署**
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FCookSleep%2Fgpt_image_playground&project-name=gpt-image-playground&repository-name=gpt-image-playground)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FZyphrZero%2Fimage-playground&project-name=eggen&repository-name=eggen)
 
 点击上方按钮导入仓库即可，Vercel 会自动执行构建并部署静态文件。添加或修改环境变量后需要重新部署。
 
@@ -261,7 +263,7 @@ VITE_DEFAULT_API_URL=https://api.openai.com/v1
 <details>
 <summary><strong>☁️ 方式三：Cloudflare Workers 部署</strong></summary>
 
-支持通过内置的 Wrangler 配置将构建产物作为静态资源部署至 Cloudflare Workers。
+支持通过内置的 Wrangler 配置将前端和豆包后台任务服务一起部署至 Cloudflare Workers。豆包任务交给 Durable Object 执行，刷新页面后会继续查询同一次生成结果，支持多人各自填写 API Key。部署要求、额度消耗和边界见 [豆包后台任务说明](docs/ark-background-tasks.md)。
 
 **预置配置**
 
@@ -285,7 +287,7 @@ npx wrangler login
 npm run deploy:cf
 ```
 
-部署脚本会先执行 `npm run build`，再通过 `wrangler deploy` 上传 `dist/` 目录。
+部署脚本会先执行 `npm run build`，再通过 `wrangler deploy` 上传前端静态资源、Worker 和 Durable Object 配置。无需配置共享豆包 Key。
 
 </details>
 
@@ -293,7 +295,7 @@ npm run deploy:cf
 <details>
 <summary><strong>🐳 方式四：Docker 部署</strong></summary>
 
-支持通过官方发布的 Docker 镜像在服务器或本地容器环境中快速运行。
+支持通过本项目发布的 Docker 镜像在服务器或本地容器环境中快速运行。首次使用前需要在仓库中推送 `v*` 标签，由 GitHub Actions 构建并推送镜像到 `ghcr.io/zyphrzero/eggen`。
 
 **环境变量**
 
@@ -323,7 +325,7 @@ npm run deploy:cf
 ```bash
 docker run -d -p 8080:80 \
   -e DEFAULT_API_URL=https://api.openai.com/v1 \
-  ghcr.io/cooksleep/gpt_image_playground:latest
+  ghcr.io/zyphrzero/eggen:latest
 ```
 
 开启代理并隐藏真实地址：
@@ -334,7 +336,7 @@ docker run -d -p 8080:80 \
   -e API_PROXY_URL=https://real-api.example.com/v1 \
   -e ENABLE_API_PROXY=true \
   -e LOCK_API_PROXY=true \
-  ghcr.io/cooksleep/gpt_image_playground:latest
+  ghcr.io/zyphrzero/eggen:latest
 ```
 
 挂载本地配置文件：
@@ -343,7 +345,7 @@ docker run -d -p 8080:80 \
 docker run -d -p 8080:80 \
   -v ./gpt-image-config.json:/config/gpt-image-config.json:ro \
   -e DEFAULT_API_URL=/config/gpt-image-config.json \
-  ghcr.io/cooksleep/gpt_image_playground:latest
+  ghcr.io/zyphrzero/eggen:latest
 ```
 
 使用 host 网络加 `--network host`，修改端口用 `-e PORT=28080`。
@@ -352,8 +354,8 @@ docker run -d -p 8080:80 \
 
 ```yaml
 services:
-  gpt-image-playground:
-    image: ghcr.io/cooksleep/gpt_image_playground:latest
+  eggen:
+    image: ghcr.io/zyphrzero/eggen:latest
     environment:
       - DEFAULT_API_URL=https://api.openai.com/v1
     ports:
@@ -362,7 +364,7 @@ services:
 ```
 **更新说明：**
 
-使用 `latest` 标签时，重新拉取镜像并重启即可更新（如 `docker compose pull && docker compose up -d`）。若需固定版本可使用官方提供的版本号标签（如 `0.2.x`）。
+使用 `latest` 标签时，重新拉取镜像并重启即可更新（如 `docker compose pull && docker compose up -d`）。若需固定版本可使用本项目提供的版本号标签（如 `0.7.x`）。
 
 </details>
 
@@ -532,7 +534,7 @@ https://cooksleep.github.io/gpt_image_playground?apiUrl={address}&apiKey={key}&m
 
 **1. 导入链接（单配置导入，最简单）**
 
-在项目的 [Vercel 在线体验](https://gpt-image-playground.cooksleep.dev) 或 [GitHub Pages 在线体验](https://cooksleep.github.io/gpt_image_playground) 中配置好某个条目后，点击“链接”按钮复制含 `?settings=` 参数的 URL（请勿勾选任何“New API 变量配置”选项），直接填入环境变量即可。
+在[原项目 Vercel 在线体验](https://gpt-image-playground.cooksleep.dev)或[原项目 GitHub Pages 在线体验](https://cooksleep.github.io/gpt_image_playground)中配置好某个条目后，点击“链接”按钮复制含 `?settings=` 参数的 URL（请勿勾选任何“New API 变量配置”选项），直接填入环境变量即可。
 
 
 > 💡 **提示**：页面中的“复制导入配置 URL”按钮导出的是**当前选中的单个配置**及其关联的自定义供应商。如需一次性预置包含多个服务商的列表，请使用下方的本地/仓库文件或远程 URL 方式。
@@ -555,7 +557,7 @@ Docker 需要通过 volume 挂载宿主机文件到容器内路径：
 docker run -d -p 8080:80 \
   -v ./gpt-image-config.json:/config/gpt-image-config.json:ro \
   -e DEFAULT_API_URL=/config/gpt-image-config.json \
-  ghcr.io/cooksleep/gpt_image_playground:latest
+  ghcr.io/zyphrzero/eggen:latest
 ```
 
 > Docker 环境变量名为 `DEFAULT_API_URL`（不含 `VITE_` 前缀）。
@@ -583,7 +585,7 @@ VITE_DEFAULT_API_URL=https://example.com/gpt-image-config.json
 
 **创建方式：**
 
-1. **在线体验中生成**：打开 [Vercel 在线体验](https://gpt-image-playground.cooksleep.dev) 或 [GitHub Pages 在线体验](https://cooksleep.github.io/gpt_image_playground)，进入 **设置 → API 配置 → 供应商类型 → 创建自定义供应商 → AI 一键生成与导入**，粘贴第三方 API 文档让 AI 生成配置。
+1. **在线体验中生成**：打开[原项目 Vercel 在线体验](https://gpt-image-playground.cooksleep.dev)或[原项目 GitHub Pages 在线体验](https://cooksleep.github.io/gpt_image_playground)，进入 **设置 → API 配置 → 供应商类型 → 创建自定义供应商 → AI 一键生成与导入**，粘贴第三方 API 文档让 AI 生成配置。
 2. **应用内导出**：生成完成后，在 **API 配置 → 当前配置** 右侧点击“链接按钮”复制含 `?settings=` 参数的分享 URL，可直接用作环境变量值。
 
 也可以参考 [自定义供应商 LLM 提示词](docs/custom-provider-llm-prompt.md)，将提示词和第三方 API 文档直接发给任意 LLM，手动获取完整 JSON。
@@ -659,7 +661,7 @@ VITE_DEFAULT_API_URL=https://example.com/gpt-image-config.json
 
 ## 📄 许可证 & 致谢
 
-本项目基于 [MIT License](LICENSE) 开源。
+本项目「蛋壳 Eggen」基于 [MIT License](LICENSE) 开源，由 [GPT Image Playground](https://github.com/CookSleep/gpt_image_playground) 改名而来，感谢原作者 [@CookSleep](https://github.com/CookSleep) 的开源工作。
 
 特别致谢：[LINUX DO](https://linux.do)
 
@@ -667,7 +669,7 @@ VITE_DEFAULT_API_URL=https://example.com/gpt-image-config.json
 
 <div align="center">
 
-如果这个项目对你有帮助，欢迎通过爱发电赞助支持，你的每一份鼓励都是持续更新的动力！
+如果这个项目对你有帮助，欢迎赞助原作者，你的每一份鼓励都是持续更新的动力！
 
 <br>
 <br>
@@ -681,7 +683,7 @@ VITE_DEFAULT_API_URL=https://example.com/gpt-image-config.json
 
 </div>
 
-## ⭐ Star History
+## ⭐ 原项目 Star History
 
 <div align="center">
   <a href="https://www.star-history.com/?repos=CookSleep%2Fgpt_image_playground&type=date&legend=top-left">

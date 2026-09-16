@@ -2,6 +2,7 @@ import { DEFAULT_PARAMS, type AppSettings, type TaskParams } from '../types'
 import { getActiveApiProfile, isOpenAICompatibleProvider } from './apiProfiles'
 import { getImageGenerationModel, isGptImage25Model } from './imageModels'
 import { normalizeCodexCliImageSize, normalizeImageSize } from './size'
+import { getSeedreamSizeConfig, normalizeSeedreamSize } from './seedreamSize'
 
 export const DEFAULT_FAL_IMAGE_SIZE = '1360x1024'
 export const MAX_FAL_OUTPUT_IMAGES = 4
@@ -17,10 +18,15 @@ export function normalizeParamsForSettings(
   options: { hasInputImages?: boolean } = {},
 ): TaskParams {
   const activeProfile = getActiveApiProfile(settings)
+  const imageModel = getImageGenerationModel(activeProfile)
+  const seedream = activeProfile.provider !== 'fal' ? getSeedreamSizeConfig(imageModel) : null
+  const size = !seedream && imageModel.toLowerCase().includes('gpt-image') && /^(1|1\.5|2|3|4)k$/i.test(params.size.trim())
+    ? 'auto'
+    : params.size
   const outputImageLimit = getOutputImageLimitForSettings(settings)
   const nextParams: TaskParams = {
     ...params,
-    size: normalizeImageSize(params.size) || DEFAULT_PARAMS.size,
+    size: seedream ? normalizeSeedreamSize(size) : normalizeImageSize(size) || DEFAULT_PARAMS.size,
     n: Math.min(outputImageLimit, Math.max(1, params.n || DEFAULT_PARAMS.n)),
   }
 

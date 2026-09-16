@@ -1,9 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gpt-image-playground",
+  "name": "eggen",
+  "main": "worker/arkTasks.ts",
   "compatibility_date": "2026-05-07",
+  "durable_objects": {
+    "bindings": [{ "name": "ARK_TASKS", "class_name": "ArkTask" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ArkTask"] }],
   "assets": {
+    "binding": "ASSETS",
     "directory": "./dist",
+    "run_worker_first": ["/api/ark/*"],
     "not_found_handling": "single-page-application"
   }
 }

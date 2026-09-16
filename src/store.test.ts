@@ -9,6 +9,7 @@ import { deleteAgentRoundFromConversation, getActiveAgentRounds, getAgentConvers
 import { cleanStaleAgentInputDrafts } from './lib/inputDraftState'
 import { normalizePersistedState } from './lib/persistedState'
 import { setPresetConfig } from './lib/presetConfig'
+import arkConfig from '../doubao-ark-config.json'
 vi.hoisted(() => {
   const values = new Map<string, string>()
   vi.stubGlobal('localStorage', {
@@ -1115,6 +1116,39 @@ describe('agent conversation persistence', () => {
     expect(state.maskEditorImageId).toBeNull()
   })
 
+})
+
+describe('Ark task recovery', () => {
+  it('restores a running task without poll configuration and only queries its existing ID', async () => {
+    await clearTasks()
+    await clearImages()
+    await clearAgentConversations()
+    const settings = normalizeSettings({ ...arkConfig, profiles: [{ ...arkConfig.profiles[0], apiKey: 'test-key' }] })
+    useStore.setState({ settings, tasks: [], agentConversations: [], inputImages: [], galleryInputDraft: null, agentInputDrafts: {} })
+    await putDbTask(task({
+      id: 'ark-restored',
+      apiProvider: settings.profiles[0].provider,
+      apiProfileId: settings.profiles[0].id,
+      customTaskId: 'eggen-ark:00000000-0000-4000-8000-000000000001',
+      status: 'running',
+      finishedAt: null,
+      elapsed: null,
+    }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ data: [{ b64_json: 'aW1hZ2U=' }] }))
+    try {
+      await initStore()
+      expect(useStore.getState().tasks[0].status).toBe('running')
+      await vi.waitFor(() => expect(useStore.getState().tasks[0].status).toBe('done'))
+      expect(useStore.getState().tasks[0].outputImages).toHaveLength(1)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock.mock.calls[0][1]?.method).toBeUndefined()
+      expect((await getAllTasks())[0].status).toBe('done')
+    } finally {
+      fetchMock.mockRestore()
+      await clearTasks()
+      useStore.setState({ tasks: [], settings: normalizeSettings(DEFAULT_SETTINGS) })
+    }
+  })
 })
 
 describe('fal task recovery', () => {

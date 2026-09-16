@@ -8,7 +8,7 @@ import { getImageGenerationModel, isGptImage25Model } from '../lib/imageModels'
 import { ensureImageCached, getCachedImage } from '../lib/imageCache'
 import { DEFAULT_FAL_IMAGE_SIZE, getChangedParams, getOutputImageLimitForSettings, normalizeParamsForSettings } from '../lib/paramCompatibility'
 import { getAtImageQuery, getImageMentionLabel, getPromptIndexFromVisibleIndex, getPromptMentionParts, getSelectedImageMentionLabel, imageMentionMatches, insertImageMentionAtVisibleRange, insertTextMentionAtVisibleRange, isCursorInSelectedImageMention, stripImageMentionMarkers } from '../lib/promptImageMentions'
-import { normalizeCodexCliImageSize, normalizeImageSize } from '../lib/size'
+import { getSeedreamSizeConfig, getSeedreamSizeError } from '../lib/seedreamSize'
 import { createMaskPreviewDataUrl } from '../lib/canvasImage'
 import { getSafeBoundingClientRect } from '../lib/domRect'
 import { collectAgentRoundOutputImageSlots } from '../lib/agentImageReferences'
@@ -431,15 +431,18 @@ export default function InputBar() {
     activeProfile.id === settingsActiveProfile.id && activeProfile.model === settingsActiveProfile.model
       ? settings
       : normalizeSettings({ ...settings, activeProfileId: activeProfile.id, profiles: settings.profiles.map((profile) => profile.id === activeProfile.id ? activeProfile : profile) })
-  ), [activeProfile.id, settingsActiveProfile.id, settings])
+  ), [activeProfile, settingsActiveProfile, settings])
+  const seedreamSize = activeProfile.provider !== 'fal' ? getSeedreamSizeConfig(getImageGenerationModel(activeProfile)) : null
+  const normalizedSize = normalizeParamsForSettings(params, effectiveSettings, { hasInputImages: inputImages.length > 0 }).size
+  const sizeError = seedreamSize ? getSeedreamSizeError(normalizedSize, seedreamSize) : null
   const hasSubmitApiConfig = Boolean(activeProfile.apiKey)
-  const canSubmit = Boolean(prompt.trim() && hasSubmitApiConfig && !activeAgentIsRunning)
+  const canSubmit = Boolean(prompt.trim() && hasSubmitApiConfig && !activeAgentIsRunning && !sizeError)
   const submitButtonAriaLabel = activeAgentIsRunning
     ? '停止生成'
-    : hasSubmitApiConfig
+    : sizeError ? '请调整图像尺寸' : hasSubmitApiConfig
     ? maskDraft ? '遮罩编辑' : '生成图像'
     : '请先配置 API'
-  const submitTooltipText = activeAgentIsRunning ? '停止生成' : '尚未完成 API 配置，请在右上角设置中进行'
+  const submitTooltipText = activeAgentIsRunning ? '停止生成' : sizeError ?? '尚未完成 API 配置，请在右上角设置中进行'
   const promptPlaceholder = '描述你想生成的图片，可输入 @ 来指定参考图...'
   const submitCurrentMode = useCallback(() => {
     if (appMode === 'agent') {
@@ -478,9 +481,7 @@ export default function InputBar() {
     : isFalProvider
     ? `fal.ai 最大请求数量为 ${outputImageLimit}`
     : `OpenAI 最大请求数量为 ${outputImageLimit}`
-  const displaySize = isFalTextToImage && params.size === 'auto'
-    ? DEFAULT_FAL_IMAGE_SIZE
-    : (activeProfile.codexCli ? normalizeCodexCliImageSize(params.size) : normalizeImageSize(params.size)) || DEFAULT_PARAMS.size
+  const displaySize = seedreamSize?.tiers.some((tier) => tier === normalizedSize) ? `智能 · ${normalizedSize}` : normalizedSize
 
   const qualityOptions = [
     ...(!isFalProvider ? [{ label: 'auto', value: 'auto' }] : []),
@@ -1526,6 +1527,7 @@ export default function InputBar() {
       isFalProvider={isFalProvider}
       isFalTextToImage={isFalTextToImage}
       displaySize={displaySize}
+      sizeError={sizeError}
       qualityOptions={qualityOptions}
       selectClass={selectClass}
       transparentOutputAvailable={transparentOutputAvailable}
@@ -1570,11 +1572,13 @@ export default function InputBar() {
 
       {showSizePicker && (
         <SizePickerModal
+          key={`${activeProfile.id}:${activeProfile.model}`}
           currentSize={isFalTextToImage && params.size === 'auto' ? DEFAULT_FAL_IMAGE_SIZE : params.size}
           onSelect={(size) => setParams({ size })}
           onClose={() => setShowSizePicker(false)}
           allowAuto={!isFalTextToImage}
           codexCli={activeProfile.codexCli}
+          seedream={seedreamSize}
         />
       )}
 
@@ -1803,7 +1807,7 @@ export default function InputBar() {
                   onMouseEnter={() => setSubmitHover(true)}
                   onMouseLeave={() => setSubmitHover(false)}
                 >
-                  <ButtonTooltip visible={(activeAgentIsRunning || !hasSubmitApiConfig) && submitHover} text={submitTooltipText} />
+                  <ButtonTooltip visible={(activeAgentIsRunning || !hasSubmitApiConfig || Boolean(sizeError)) && submitHover} text={submitTooltipText} />
                   <button
                     onClick={() => activeAgentIsRunning ? stopActiveAgentResponse() : hasSubmitApiConfig ? submitCurrentMode() : setShowSettings(true)}
                     disabled={activeAgentIsRunning ? false : hasSubmitApiConfig ? !canSubmit : false}
@@ -1910,7 +1914,7 @@ export default function InputBar() {
                   onMouseEnter={() => setSubmitHover(true)}
                   onMouseLeave={() => setSubmitHover(false)}
                 >
-                  <ButtonTooltip visible={(activeAgentIsRunning || !hasSubmitApiConfig) && submitHover} text={submitTooltipText} />
+                  <ButtonTooltip visible={(activeAgentIsRunning || !hasSubmitApiConfig || Boolean(sizeError)) && submitHover} text={submitTooltipText} />
                   <button
                     onClick={() => activeAgentIsRunning ? stopActiveAgentResponse() : hasSubmitApiConfig ? submitCurrentMode() : setShowSettings(true)}
                     disabled={activeAgentIsRunning ? false : hasSubmitApiConfig ? !canSubmit : false}

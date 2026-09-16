@@ -25,6 +25,7 @@ import {
 import { getImageGenerationModel } from './imageModels'
 import { isEventStreamResponse, readJsonServerSentEvents } from './serverSentEvents'
 import { prependCodexCliSizePrompt } from './size'
+import { isArkBackgroundTask, isArkImageProfile, submitArkBackgroundTask, waitForArkBackgroundTask } from './arkBackground'
 
 function getStreamPartialImages(profile: ApiProfile): number {
   return profile.streamPartialImages ?? DEFAULT_STREAM_PARTIAL_IMAGES
@@ -439,7 +440,7 @@ export async function callOpenAICompatibleImageApi(opts: CallApiOptions, profile
     const submitMapping = opts.inputImageDataUrls.length > 0 && customProvider.editSubmit
       ? customProvider.editSubmit
       : customProvider.submit
-    const isAsync = Boolean(submitMapping.taskIdPath)
+    const isAsync = Boolean(submitMapping.taskIdPath) || isArkImageProfile(profile)
     if (profile.codexCli && n > 1 && !isAsync) return callCustomHttpImageApiConcurrent(opts, profile, customProvider, n)
     return callCustomHttpImageApi(opts, profile, customProvider)
   }
@@ -823,13 +824,19 @@ async function submitCustomRequest(mapping: CustomProviderSubmitMapping, opts: C
     }
   }
 
-  const response = await fetch(buildApiUrl(profile.baseUrl, path, proxyConfig, useApiProxy), {
-    method,
-    headers,
-    cache: 'no-store',
-    body,
-    signal: controller.signal,
-  })
+  const isArkBackground = isArkImageProfile(profile) && path.replace(/^\/+/, '') === 'images/generations' && !mapping.taskIdPath
+  if (isArkBackground && (method !== 'POST' || contentType !== 'json' || typeof body !== 'string')) {
+    throw new Error('豆包后台任务需要使用 JSON 格式的 POST 生图请求。')
+  }
+  const response = isArkBackground
+    ? await submitArkBackgroundTask(profile.apiKey, body as string, profile.timeout, opts.onCustomTaskEnqueued)
+    : await fetch(buildApiUrl(profile.baseUrl, path, proxyConfig, useApiProxy), {
+        method,
+        headers,
+        cache: 'no-store',
+        body,
+        signal: controller.signal,
+      })
 
   if (!response.ok) {
     const errorMessage = await getApiErrorMessage(response)
@@ -902,8 +909,13 @@ export async function getCustomQueuedImageResult(
   taskId: string,
   params: TaskParams,
 ): Promise<CallApiResult> {
-  if (!customProvider.poll) throw new Error('自定义异步任务缺少 poll 配置')
   const mime = MIME_MAP[params.output_format] || 'image/png'
+  if (isArkBackgroundTask(taskId)) {
+    const response = await waitForArkBackgroundTask(profile.apiKey, taskId)
+    if (!response.ok) throw new Error(await getApiErrorMessage(response))
+    return parseImagesApiResponse(await response.json() as ImageApiResponse, mime)
+  }
+  if (!customProvider.poll) throw new Error('自定义异步任务缺少 poll 配置')
   return pollCustomTaskResult(profile, customProvider.poll, taskId, mime)
 }
 
@@ -934,7 +946,7 @@ async function callCustomHttpImageApi(opts: CallApiOptions, profile: ApiProfile,
     }
     if (!taskId) return extractCustomImages(submitPayload, submitMapping.result ?? {}, mime, controller.signal)
     if (!customProvider.poll) throw new Error('异步接口返回了 task_id，但服务商配置缺少 poll')
-    opts.onCustomTaskEnqueued?.({ taskId })
+    await opts.onCustomTaskEnqueued?.({ taskId })
     if (timeoutId) {
       clearTimeout(timeoutId)
       timeoutId = null

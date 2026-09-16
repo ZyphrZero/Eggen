@@ -97,15 +97,15 @@ describe('one-time API account migration', () => {
     const settings = oldSettings()
     const state = { settings, previousPresetConfig: { profiles: settings.profiles, customProviders: settings.customProviders }, dismissedPresetProfileIds: [] }
     const balance = { values: { accessKeyId: 'test-ak' }, timeoutSeconds: 30, autoQueryIntervalMinutes: 0 }
-    localStorage.setItem('gpt-image-playground.balance', JSON.stringify({ providers: { doubao: balance } }))
+    localStorage.setItem('eggen.balance', JSON.stringify({ providers: { doubao: balance } }))
     const save = vi.fn((patch) => {
       expect(putTask).toHaveBeenCalledWith(expect.objectContaining({ apiProfileId: '4.5', apiModel: 'pro' }))
       Object.assign(state, patch)
     })
     const tasks = await migrateStoredApiAccounts(state, [task], save)
     expect(state.previousPresetConfig.profiles).toHaveLength(2)
-    expect(JSON.parse(localStorage.getItem('gpt-image-playground.balance')!)).toEqual({ accounts: { '4.5': balance } })
-    expect(localStorage.getItem('gpt-image-playground.api-accounts-v1-migrated')).toBe('done')
+    expect(JSON.parse(localStorage.getItem('eggen.balance')!)).toEqual({ accounts: { '4.5': balance } })
+    expect(localStorage.getItem('eggen.api-accounts-v1-migrated')).toBe('done')
     await migrateStoredApiAccounts(state, tasks, save)
     expect(save).toHaveBeenCalledTimes(1)
     expect(putTask).toHaveBeenCalledTimes(1)
@@ -116,6 +116,6 @@ describe('one-time API account migration', () => {
     const save = vi.fn()
     await expect(migrateStoredApiAccounts({ settings: oldSettings(), previousPresetConfig: null, dismissedPresetProfileIds: [] }, [task], save)).rejects.toThrow('disk full')
     expect(save).not.toHaveBeenCalled()
-    expect(localStorage.getItem('gpt-image-playground.api-accounts-v1-migrated')).toBeNull()
+    expect(localStorage.getItem('eggen.api-accounts-v1-migrated')).toBeNull()
   })
 })

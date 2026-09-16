@@ -213,7 +213,7 @@ export interface TaskRecord {
   falEndpoint?: string
   /** fal.ai 任务连接断开后是否等待自动恢复 */
   falRecoverable?: boolean
-  /** 自定义异步服务商任务 ID，用于重启后继续查询结果 */
+  /** 自定义异步服务商或豆包后台任务 ID，用于刷新后继续查询结果 */
   customTaskId?: string
   /** 自定义异步任务是否等待自动恢复 */
   customRecoverable?: boolean

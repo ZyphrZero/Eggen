@@ -57,8 +57,9 @@ export default defineConfig(async ({ command, mode }) => {
     },
     server: {
       host: true,
-      proxy:
-        devProxyConfig?.enabled
+      proxy: {
+        '/api/ark/': { target: 'http://127.0.0.1:8787' },
+        ...(devProxyConfig?.enabled
           ? {
               [devProxyConfig.prefix]: {
                 target: devProxyConfig.target,
@@ -71,7 +72,8 @@ export default defineConfig(async ({ command, mode }) => {
                   ),
               },
             }
-          : undefined,
+          : {}),
+      },
     },
   }
 })

@@ -1,7 +1,7 @@
 {
-  "name": "GPT Image Playground",
-  "short_name": "GPT Image",
-  "description": "GPT Image Playground 图像生成工作台",
+  "name": "蛋壳 Eggen",
+  "short_name": "蛋壳",
+  "description": "蛋壳 Eggen 图像生成工作台",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,10 +9,16 @@
   "theme_color": "#111827",
   "icons": [
     {
-      "src": "./pwa-icon.svg",
+      "src": "./eggen-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./eggen-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
